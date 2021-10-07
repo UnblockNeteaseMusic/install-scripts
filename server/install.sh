@@ -277,6 +277,8 @@ function install_unm_server() {
 	EOF
 	systemctl enable "${UNM_SERV_SERVICE##*/}"
 
+	touch "${UNM_SERV_BIN_DIR}/.install-done"
+	
 	start_stop_unm_server
 
 	__info_msg "正在保存本脚本到 ${UNM_SERV_BIN}。。。"
@@ -287,7 +289,6 @@ function install_unm_server() {
 		__error_msg "保存脚本失败。"
 	fi
 
-	touch "${UNM_SERV_BIN_DIR}/.install-done"
 	__success_msg "UnblockNeteaseMusic 服务端安装完毕。"
 	local UNM_SERV_IP="$(curl -fsSL "https://myip.ipip.net/s" || curl -fsSL "https://ipinfo.io/ip" || echo "127.0.0.1")"
 	local UNM_SERV_ADDR="${GREEN_BACK}${UNM_SERV_IP}:${UNM_SERV_LISTEN_PORT}${DEFAULT_COLOR}"
