@@ -432,7 +432,7 @@ function tweak_unm_server() {
 		[yY][eE][sS]|[yY])
 			local TEMP_CRONTAB_FILE="$(mktemp)"
 			crontab -l > "${TEMP_CRONTAB_FILE}"
-			if [ "${UNM_SERV_AUTO_UPDATE_TIP}" == "禁用" ];
+			if [ "${UNM_SERV_AUTO_UPDATE_TIP}" == "禁用" ]; then
 				sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "${TEMP_CRONTAB_FILE}"
 			else
 				echo -e "0 3 * * * { pushd \"${UNM_SERV_BIN_DIR}\"; git pull; popd; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
