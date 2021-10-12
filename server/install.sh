@@ -246,7 +246,7 @@ function install_unm_server() {
 	__info_msg "正在配置自动更新。。。"
 	local TEMP_CRONTAB_FILE="$(mktemp)"
 	crontab -l > "${TEMP_CRONTAB_FILE}"
-	echo -e "0 3 * * * { pushd \"${UNM_SERV_BIN_DIR}\"; git pull; popd; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
+	echo -e "0 3 * * * { cd \"${UNM_SERV_BIN_DIR}\"; git pull; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
 	crontab "${TEMP_CRONTAB_FILE}"
 	rm -f "${TEMP_CRONTAB_FILE}"
 
@@ -436,7 +436,7 @@ function tweak_unm_server() {
 			if [ "${UNM_SERV_AUTO_UPDATE_TIP}" == "禁用" ]; then
 				sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "${TEMP_CRONTAB_FILE}"
 			else
-				echo -e "0 3 * * * { pushd \"${UNM_SERV_BIN_DIR}\"; git pull; popd; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
+				echo -e "0 3 * * * { cd \"${UNM_SERV_BIN_DIR}\"; git pull; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
 			fi
 			crontab "${TEMP_CRONTAB_FILE}"
 			rm -f "${TEMP_CRONTAB_FILE}"
