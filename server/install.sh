@@ -93,7 +93,7 @@ UnblockNeteaseMusic 服务端运行状态：${RUNNING_STATUS}
 
 	5. 调整 UnblockNeteaseMusic 服务端设定
 	6. 手动更新 UnblockNeteaseMusic 服务端
-	7. 查看 UnblockNeteaseMusic 运行日志
+	7. 查看 UnblockNeteaseMusic 运行日志（CTRL+C退出）
 ----------------------------------------------
 UnblockNeteaseMusic 服务端监听地址: ${UNM_SERV_ADDR}
 UnblockNeteaseMusic 服务端自动代理文件地址: ${UNM_SERV_PAC}
