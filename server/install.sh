@@ -71,7 +71,7 @@ function print_menu(){
 		else
 			source "$UNM_SERV_ENV"
 			RUNNING_STATUS="${GREEN_COLOR}运行中${DEFAULT_COLOR} | ${GREEN_COLOR}PID: ${UNM_SERV_PID}${DEFAULT_COLOR}"
-			UNM_SERV_IP="$(curl -fsSL "https://myip.ipip.net/s" || curl -fsSL "https://ipinfo.io/ip" || echo "127.0.0.1")" > "/dev/null"
+			UNM_SERV_IP="$(curl -fsL "https://myip.ipip.net/s" || curl -fsL "https://ipinfo.io/ip" || echo "127.0.0.1")"
 			UNM_SERV_ADDR="${GREEN_BACK}${UNM_SERV_IP}:${PORTS}${DEFAULT_COLOR}"
 			UNM_SERV_PAC="${GREEN_BACK}http://${UNM_SERV_IP}:${PORTS%:*}/proxy.pac${DEFAULT_COLOR}"
 		fi
@@ -292,7 +292,7 @@ function install_unm_server() {
 	fi
 
 	__success_msg "UnblockNeteaseMusic 服务端安装完毕。"
-	local UNM_SERV_IP="$(curl -fsSL "https://myip.ipip.net/s" || curl -fsSL "https://ipinfo.io/ip" || echo "127.0.0.1")" > "/dev/null"
+	local UNM_SERV_IP="$(curl -fsL "https://myip.ipip.net/s" || curl -fsL "https://ipinfo.io/ip" || echo "127.0.0.1")"
 	local UNM_SERV_ADDR="${GREEN_BACK}${UNM_SERV_IP}:${UNM_SERV_LISTEN_PORT}${DEFAULT_COLOR}"
 	local UNM_SERV_PAC="${GREEN_BACK}http://${UNM_SERV_IP}:${UNM_SERV_LISTEN_PORT%:*}/proxy.pac${DEFAULT_COLOR}"
 	__info_msg "UnblockNeteaseMusic 服务端监听地址：${UNM_SERV_ADDR}"
