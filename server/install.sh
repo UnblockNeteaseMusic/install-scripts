@@ -93,12 +93,13 @@ UnblockNeteaseMusic 服务端运行状态：${RUNNING_STATUS}
 
 	5. 调整 UnblockNeteaseMusic 服务端设定
 	6. 手动更新 UnblockNeteaseMusic 服务端
+	7. 查看 UnblockNeteaseMusic 运行日志
 ----------------------------------------------
 UnblockNeteaseMusic 服务端监听地址: ${UNM_SERV_ADDR}
 UnblockNeteaseMusic 服务端自动代理文件地址: ${UNM_SERV_PAC}
 ----------------------------------------------"
 	local DO_ACTION
-	read -rep "Action [1-6]: " DO_ACTION
+	read -rep "Action [1-7]: " DO_ACTION
 	case "${DO_ACTION}" in
 		"1") install_unm_server ;;
 		"2") remove_unm_server ;;
@@ -106,6 +107,7 @@ UnblockNeteaseMusic 服务端自动代理文件地址: ${UNM_SERV_PAC}
 		"4") restart_unm_server ;;
 		"5") tweak_unm_server ;;
 		"6") update_unm_server ;;
+		"7") print_unm_log ;;
 		"") __info_msg "操作已取消。"; exit 2 ;;
 		*) __error_msg "未定义行为：${DO_ACTION}。"; exit 2 ;;
 	esac
@@ -185,7 +187,7 @@ function install_unm_server() {
 		[ -z "${UNM_SERV_LISTEN_PORT}" ] && UNM_SERV_LISTEN_PORT="${UNM_SERV_LISTEN_PORT_DEFAULT}"
 
 		local UNM_SERV_USED_SOURCES
-		read -rep "请输入欲使用的音源（默认：使用程序默认值）：" UNM_SERV_USED_SOURCES
+		read -rep $'当前支持音源：kuwo kugou qq migu pyncmd bilibili joox youtube ytdownload youtubedl\x0a请输入欲使用的音源（默认：使用程序默认值）：' UNM_SERV_USED_SOURCES
 		[ -n "${UNM_SERV_USED_SOURCES}" ] && UNM_SERV_USED_SOURCES="-o ${UNM_SERV_USED_SOURCES}"
 
 		local UNM_SERV_USED_ENDPOINT UNM_SERV_USED_ENDPOINT_DEFAULT
@@ -461,7 +463,7 @@ function tweak_unm_server() {
 			__success_msg "端口已更改为 ${UNM_SERV_LISTEN_PORT}。"
 		fi
 		;;
-	"2") tweak_unm_server_arg "请输入欲使用的音源（默认：${SOURCES#-o *}）：" "音源" "SOURCES" "-o " ;;
+	"2") tweak_unm_server_arg $'当前支持音源：kuwo kugou qq migu pyncmd bilibili joox youtube ytdownload youtubedl\x0a请输入欲使用的音源（当前使用音源：'"${SOURCES#-o *}"'）：' "音源" "SOURCES" "-o " ;;
 	"3") tweak_unm_server_arg "请输入欲使用的 EndPoint（默认：${ENDPOINT#-e *}）：" "EndPoint" "ENDPOINT" "-e " ;;
 	"4") tweak_unm_server_arg "请输入一个自定义网易云音乐服务器 IP（默认：${HOST#-f *}）：" "网易云音乐服务器 IP" "HOST" "-f " ;;
 	"5") tweak_unm_server_arg "请输入 HTTP(S) 代理服务器地址（默认：${PROXY#-u *}）" "代理服务器地址" "PROXY" "-u " ;;
@@ -587,6 +589,17 @@ function setup_firewall() {
 		ufw $UFW_ARG allow "${PORT_HTTP}/tcp"
 		[ "${PORT_HTTPS}" != "${PORT_HTTP}" ] && ufw $UFW_ARG allow "${PORT_HTTPS}/tcp"
 		ufw reload
+	fi
+}
+
+function print_unm_log(){
+	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+
+	if systemctl is-active "${UNM_SERV_SERVICE##*/}" > "/dev/null"; then
+		journalctl -e -u unblockneteasemusic-server.service
+	else
+		__error_msg "您目前尚未运行 UnblockNeteaseMusic 服务端。"
+		exit 1
 	fi
 }
 
