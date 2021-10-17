@@ -248,7 +248,7 @@ function install_unm_server() {
 	__info_msg "正在配置自动更新。。。"
 	local TEMP_CRONTAB_FILE="$(mktemp)"
 	crontab -l > "${TEMP_CRONTAB_FILE}"
-	echo -e "0 3 * * * git -C \"${UNM_SERV_BIN_DIR}\" pull > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
+	echo -e "0 3 * * * { git -C \"${UNM_SERV_BIN_DIR}\" pull; systemctl restart "${UNM_SERV_SERVICE##*/}"; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
 	crontab "${TEMP_CRONTAB_FILE}"
 	rm -f "${TEMP_CRONTAB_FILE}"
 
@@ -438,7 +438,7 @@ function tweak_unm_server() {
 			if [ "${UNM_SERV_AUTO_UPDATE_TIP}" == "禁用" ]; then
 				sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "${TEMP_CRONTAB_FILE}"
 			else
-				echo -e "0 3 * * * git -C \"${UNM_SERV_BIN_DIR}\" pull > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
+				echo -e "0 3 * * * { git -C \"${UNM_SERV_BIN_DIR}\" pull; systemctl restart "${UNM_SERV_SERVICE##*/}"; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
 			fi
 			crontab "${TEMP_CRONTAB_FILE}"
 			rm -f "${TEMP_CRONTAB_FILE}"
@@ -596,7 +596,7 @@ function print_unm_log(){
 	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	if systemctl is-active "${UNM_SERV_SERVICE##*/}" > "/dev/null"; then
-		journalctl -e -u unblockneteasemusic-server.service
+		journalctl -e -u "${UNM_SERV_SERVICE##*/}"
 	else
 		__error_msg "您目前尚未运行 UnblockNeteaseMusic 服务端。"
 		exit 1
