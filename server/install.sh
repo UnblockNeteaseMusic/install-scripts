@@ -136,18 +136,31 @@ function install_unm_server() {
 	if [ "${SYSTEM_OS}" == "RHEL" ]; then
 		yum update -y
 		yum install -y epel-release
-		yum install -y ca-certificates crontabs curl firewalld git lsof
+		yum install -y ca-certificates crontabs curl git lsof
+
+		yum install -y python3 python3-pip
+		pip3 install yt-dlp
+
 		curl -fsSL "https://rpm.nodesource.com/setup_14.x" | bash
 		yum install -y nodejs
+
+		yum install firewalld
 		[ -e "/etc/ssh/sshd_config" ] && firewall-cmd --permanent --zone=public --add-port=$(awk -F 'Port ' '{print $2}' '/etc/ssh/sshd_config' | xargs)/tcp
 		systemctl start firewalld
 		firewall-cmd --reload
 	elif [ "${SYSTEM_OS}" == "DEBIAN" ]; then
 		apt update -y
-		apt install -y ca-certificates cron curl git lsof ufw
+
+		apt install -y ca-certificates cron curl git lsof
+
+		apt install -y python3 python3-pip
+		pip3 install yt-dlp
 		curl -fsSL "https://deb.nodesource.com/setup_16.x" | bash
 		apt install -y nodejs
+
 		[ -e "/etc/ssh/sshd_config" ] && ufw allow $(awk -F 'Port ' '{print $2}' '/etc/ssh/sshd_config' | xargs)/tcp
+
+		apt install -y ufw
 		ufw enable <<-EOF
 			y
 		EOF
