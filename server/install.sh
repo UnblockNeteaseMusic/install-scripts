@@ -141,7 +141,7 @@ function install_unm_server() {
 		yum install -y python3 python3-pip
 		pip3 install yt-dlp
 
-		curl -fsSL "https://rpm.nodesource.com/setup_14.x" | bash
+		curl -fsSL "https://rpm.nodesource.com/setup_16.x" | bash
 		yum install -y nodejs
 
 		yum install firewalld
@@ -155,7 +155,7 @@ function install_unm_server() {
 
 		apt install -y python3 python3-pip
 		pip3 install yt-dlp
-		curl -fsSL "https://deb.nodesource.com/setup_16.x" | bash
+		curl -fsSL "https://deb.nodesource.com/setup_18.x" | bash
 		apt install -y nodejs
 
 		[ -e "/etc/ssh/sshd_config" ] && ufw allow $(awk -F 'Port ' '{print $2}' '/etc/ssh/sshd_config' | xargs)/tcp
