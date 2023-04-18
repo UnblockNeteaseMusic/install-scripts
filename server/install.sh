@@ -40,7 +40,7 @@ function __warning_msg() {
 }
 
 function base_check() {
-	[ "${EUID}" -ne "0" ] && { __error_msg "请使用 ROOT 权限执行本脚本。"; exit 1; }
+	[ "$EUID" -ne "0" ] && { __error_msg "请使用 ROOT 权限执行本脚本。"; exit 1; }
 	command -v "systemctl" > "/dev/null" || { __error_msg "未在您的系统上发现 systemd，安装无法继续。"; exit 1; }
 
 	if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ]; then
@@ -77,13 +77,13 @@ function print_menu(){
 		fi
 	else
 		INSTALL_STATUS="${RED_COLOR}未安装${DEFAULT_COLOR}"
-		RUNNING_STATUS="${INSTALL_STATUS}"
-		UNM_SERV_ADDR="${INSTALL_STATUS}"
-		UNM_SERV_PAC="${INSTALL_STATUS}"
+		RUNNING_STATUS="$INSTALL_STATUS"
+		UNM_SERV_ADDR="$INSTALL_STATUS"
+		UNM_SERV_PAC="$INSTALL_STATUS"
 	fi
 
-	echo -e "UnblockNeteaseMusic 服务端安装状态：${INSTALL_STATUS}
-UnblockNeteaseMusic 服务端运行状态：${RUNNING_STATUS}
+	echo -e "UnblockNeteaseMusic 服务端安装状态：$INSTALL_STATUS
+UnblockNeteaseMusic 服务端运行状态：$RUNNING_STATUS
 ----------------------------------------------
 	1. 安装 UnblockNeteaseMusic 服务端
 	2. 移除 UnblockNeteaseMusic 服务端
@@ -95,12 +95,12 @@ UnblockNeteaseMusic 服务端运行状态：${RUNNING_STATUS}
 	6. 手动更新 UnblockNeteaseMusic 服务端
 	7. 查看 UnblockNeteaseMusic 运行日志（CTRL+C退出）
 ----------------------------------------------
-UnblockNeteaseMusic 服务端监听地址: ${UNM_SERV_ADDR}
-UnblockNeteaseMusic 服务端自动代理文件地址: ${UNM_SERV_PAC}
+UnblockNeteaseMusic 服务端监听地址: $UNM_SERV_ADDR
+UnblockNeteaseMusic 服务端自动代理文件地址: $UNM_SERV_PAC
 ----------------------------------------------"
 	local DO_ACTION
 	read -rep "Action [1-7]: " DO_ACTION
-	case "${DO_ACTION}" in
+	case "$DO_ACTION" in
 		"1") install_unm_server ;;
 		"2") remove_unm_server ;;
 		"3") start_stop_unm_server ;;
@@ -114,7 +114,7 @@ UnblockNeteaseMusic 服务端自动代理文件地址: ${UNM_SERV_PAC}
 }
 
 function install_unm_server() {
-	if [ -f "${UNM_SERV_BIN_DIR}/.install-done" ]; then
+	if [ -f "$UNM_SERV_BIN_DIR/.install-done" ]; then
 		local REINSTALL_UNM_SERV
 		__info_msg "您似乎已经安装过 UnblockNeteaseMusic 服务端。"
 		read -rep "是否重新安装 [y/N]：" REINSTALL_UNM_SERV
@@ -129,7 +129,7 @@ function install_unm_server() {
 			;;
 		esac
 	else
-		rm -rf "${UNM_SERV_BIN_DIR}"
+		rm -rf "$UNM_SERV_BIN_DIR"
 	fi
 
 	__info_msg "正在处理依赖项。。。"
@@ -143,11 +143,6 @@ function install_unm_server() {
 
 		curl -fsSL "https://rpm.nodesource.com/setup_16.x" | bash
 		yum install -y nodejs
-
-		yum install firewalld
-		[ -e "/etc/ssh/sshd_config" ] && firewall-cmd --permanent --zone=public --add-port=$(awk -F 'Port ' '{print $2}' '/etc/ssh/sshd_config' | xargs)/tcp
-		systemctl start firewalld
-		firewall-cmd --reload
 	elif [ "${SYSTEM_OS}" == "DEBIAN" ]; then
 		apt update -y
 
@@ -157,56 +152,48 @@ function install_unm_server() {
 		pip3 install yt-dlp
 		curl -fsSL "https://deb.nodesource.com/setup_18.x" | bash
 		apt install -y nodejs
-
-		[ -e "/etc/ssh/sshd_config" ] && ufw allow $(awk -F 'Port ' '{print $2}' '/etc/ssh/sshd_config' | xargs)/tcp
-
-		apt install -y ufw
-		ufw enable <<-EOF
-			y
-		EOF
-		ufw reload
 	fi
 
 	__info_msg "正在克隆 UnblockNeteaseMusic 服务端到本地。。。"
 	mkdir -p "${UNM_SERV_BIN_DIR%/*}"
-	git clone "${UNM_SERV_GIT_REPO}" "${UNM_SERV_BIN_DIR}" || { rm -rf "${UNM_SERV_BIN_DIR}"; __error_msg "克隆服务端失败。"; exit 1; }
-	pushd "${UNM_SERV_BIN_DIR}"
+	git clone "$UNM_SERV_GIT_REPO" "$UNM_SERV_BIN_DIR" || { rm -rf "$UNM_SERV_BIN_DIR"; __error_msg "克隆服务端失败。"; exit 1; }
+	pushd "$UNM_SERV_BIN_DIR"
 	git config pull.ff only
-	node "app.js" -h || { rm -rf "${UNM_SERV_BIN_DIR}"; __error_msg "服务端运行测试失败。"; exit 1; }
+	node "app.js" -h || { rm -rf "$UNM_SERV_BIN_DIR"; __error_msg "服务端运行测试失败。"; exit 1; }
 	popd
 
-	[ -f "${UNM_SERV_ENV}" ] && {
+	[ -f "$UNM_SERV_ENV" ] && {
 		__info_msg "已在您的设备上找到 UnblockNeteaseMusic 服务端配置文件。"
 		local UNM_SERV_USE_OLD_CONF
 		read -rep "是否使用原配置文件 [Y/n]：" UNM_SERV_USE_OLD_CONF
-		case "${UNM_SERV_USE_OLD_CONF}" in
+		case "$UNM_SERV_USE_OLD_CONF" in
 		[nN][oO]|[nN])
 			UNM_SERV_USE_OLD_CONF=""
 			;;
 		*)
 			UNM_SERV_USE_OLD_CONF="true"
-			source "${UNM_SERV_ENV}"
+			source "$UNM_SERV_ENV"
 			UNM_SERV_LISTEN_PORT="$PORTS"
 			;;
 		esac
 	}
 
-	[ -z "${UNM_SERV_USE_OLD_CONF}" ] && {
+	[ -z "$UNM_SERV_USE_OLD_CONF" ] && {
 		__info_msg "请设定服务端信息："
 		local UNM_SERV_LISTEN_PORT UNM_SERV_LISTEN_PORT_DEFAULT
 		UNM_SERV_LISTEN_PORT_DEFAULT="$(( RANDOM + 10000 ))"
 		UNM_SERV_LISTEN_PORT_DEFAULT+=":$(( UNM_SERV_LISTEN_PORT_DEFAULT + 1 ))"
 		read -rep "请输入监听端口（默认：${UNM_SERV_LISTEN_PORT_DEFAULT}）：" UNM_SERV_LISTEN_PORT
-		[ -z "${UNM_SERV_LISTEN_PORT}" ] && UNM_SERV_LISTEN_PORT="${UNM_SERV_LISTEN_PORT_DEFAULT}"
+		[ -z "$UNM_SERV_LISTEN_PORT" ] && UNM_SERV_LISTEN_PORT="$UNM_SERV_LISTEN_PORT_DEFAULT"
 
 		local UNM_SERV_USED_SOURCES
-		read -rep $'当前支持音源：kuwo kugou qq migu pyncmd bilibili joox youtube ytdownload youtubedl\x0a请输入欲使用的音源（默认：使用程序默认值）：' UNM_SERV_USED_SOURCES
-		[ -n "${UNM_SERV_USED_SOURCES}" ] && UNM_SERV_USED_SOURCES="-o ${UNM_SERV_USED_SOURCES}"
+		read -rep $'当前支持音源：bilibili joox kugou kuwo migu pyncmd qq youtube youtubedl ytdownload yt-dlp\x0a请输入欲使用的音源（默认：使用程序默认值，多个音源用空格隔开）：' UNM_SERV_USED_SOURCES
+		[ -n "$UNM_SERV_USED_SOURCES" ] && UNM_SERV_USED_SOURCES="-o $UNM_SERV_USED_SOURCES"
 
 		local UNM_SERV_USED_ENDPOINT UNM_SERV_USED_ENDPOINT_DEFAULT
 		UNM_SERV_USED_ENDPOINT_DEFAULT="https://music.163.com"
 		read -rep "请输入 EndPoint（默认：${UNM_SERV_USED_ENDPOINT_DEFAULT}）：" UNM_SERV_USED_ENDPOINT
-		if [ "${UNM_SERV_USED_ENDPOINT}" == "-" ]; then
+		if [ "$UNM_SERV_USED_ENDPOINT" == "-" ]; then
 			UNM_SERV_USED_ENDPOINT=""
 		else
 			UNM_SERV_USED_ENDPOINT="-e ${UNM_SERV_USED_ENDPOINT:-$UNM_SERV_USED_ENDPOINT_DEFAULT}"
@@ -214,59 +201,70 @@ function install_unm_server() {
 
 		local UNM_SERV_USED_HOST
 		read -rep "请输入一个自定义网易云音乐服务器 IP（默认：不强制指定）：" UNM_SERV_USED_HOST
-		[ -n "${UNM_SERV_USED_HOST}" ] && UNM_SERV_USED_HOST="-f ${UNM_SERV_USED_HOST}"
+		[ -n "$UNM_SERV_USED_HOST" ] && UNM_SERV_USED_HOST="-f $UNM_SERV_USED_HOST"
 
 		local UNM_SERV_USED_PROXY
 		read -rep "请输入 HTTP(S) 代理服务器地址（默认：不启用代理）：" UNM_SERV_USED_PROXY
-		[ -n "${UNM_SERV_USED_PROXY}" ] && UNM_SERV_USED_PROXY="-u ${UNM_SERV_USED_PROXY}"
+		[ -n "$UNM_SERV_USED_PROXY" ] && UNM_SERV_USED_PROXY="-u $UNM_SERV_USED_PROXY"
 
 		local UNM_SERV_ENABLE_STRICT
-		read -rep "是否启用严格模式 [Y/n]：" UNM_SERV_ENABLE_STRICT
-		case "${UNM_SERV_ENABLE_STRICT}" in
+		read -rep "是否启用严格模式（丢弃非网易云音乐的请求） [Y/n]：" UNM_SERV_ENABLE_STRICT
+		case "$UNM_SERV_ENABLE_STRICT" in
 			[nN][oO]|[nN]) UNM_SERV_ENABLE_STRICT="" ;;
 			*) UNM_SERV_ENABLE_STRICT="-s" ;;
 		esac
 
 		local UNM_SERV_ENABLE_FLAC
 		read -rep "是否启用无损音质获取 [Y/n]：" UNM_SERV_ENABLE_FLAC
-		case "${UNM_SERV_ENABLE_FLAC}" in
+		case "$UNM_SERV_ENABLE_FLAC" in
 			[nN][oO]|[nN]) UNM_SERV_ENABLE_FLAC="" ;;
 			*) UNM_SERV_ENABLE_FLAC="true" ;;
 		esac
 
+		local UNM_SERV_SELECT_MAX_BR
+		if [ "$UNM_SERV_ENABLE_FLAC" == "true" ]; then
+			read -rep "启用音源音质选取可选择所有音源中的最高码率替换音频，但会降低响应速度。\x0a是否启用音源音质选取 [y/N]：" UNM_SERV_SELECT_MAX_BR
+			case "$UNM_SERV_SELECT_MAX_BR" in
+				[yY][eE][sS]|[yY]) UNM_SERV_SELECT_MAX_BR="true" ;;
+				*) UNM_SERV_SELECT_MAX_BR="" ;;
+			esac
+		fi
+
 		local UNM_SERV_ENABLE_LOCAL_VIP
-		read -rep "是否启用本地黑胶伪装 [y/N]：" UNM_SERV_ENABLE_LOCAL_VIP
-		case "${UNM_SERV_ENABLE_LOCAL_VIP}" in
-			[yY][eE][sS]|[yY]) UNM_SERV_ENABLE_LOCAL_VIP="true" ;;
+		read -rep "是否启用本地黑胶伪装 [cvip/svip/no]：" UNM_SERV_ENABLE_LOCAL_VIP
+		case "$UNM_SERV_ENABLE_LOCAL_VIP" in
+			[cC][vV][iI][pP]) UNM_SERV_ENABLE_LOCAL_VIP="cvip" ;;
+			[sS][vV][iI][pP]) UNM_SERV_ENABLE_LOCAL_VIP="svip" ;;
 			*) UNM_SERV_ENABLE_LOCAL_VIP="" ;;
 		esac
 
 		__info_msg "正在保存配置文件。。。"
-		mkdir -p "${UNM_SERV_CONF_DIR}"
-		cat <<-EOF > "${UNM_SERV_ENV}"
-			PORTS="${UNM_SERV_LISTEN_PORT}"
-			SOURCES="${UNM_SERV_USED_SOURCES}"
-			ENDPOINT="${UNM_SERV_USED_ENDPOINT}"
-			HOST="${UNM_SERV_USED_HOST}"
-			PROXY="${UNM_SERV_USED_PROXY}"
-			STRICT="${UNM_SERV_ENABLE_STRICT}"
-			ENABLE_FLAC="${UNM_SERV_ENABLE_FLAC}"
-			ENABLE_LOCAL_VIP="${UNM_SERV_ENABLE_LOCAL_VIP}"
+		mkdir -p "$UNM_SERV_CONF_DIR"
+		cat <<-EOF > "$UNM_SERV_ENV"
+			PORTS="$UNM_SERV_LISTEN_PORT"
+			SOURCES="$UNM_SERV_USED_SOURCES"
+			ENDPOINT="$UNM_SERV_USED_ENDPOINT"
+			HOST="$UNM_SERV_USED_HOST"
+			PROXY="$UNM_SERV_USED_PROXY"
+			STRICT="$UNM_SERV_ENABLE_STRICT"
+			ENABLE_FLAC="$UNM_SERV_ENABLE_FLAC"
+			ENABLE_LOCAL_VIP="$UNM_SERV_ENABLE_LOCAL_VIP"
+			SELECT_MAX_BR="$UNM_SERV_SELECT_MAX_BR"
 		EOF
 	}
 
 	__info_msg "正在设定防火墙规则。。。"
-	setup_firewall add "${UNM_SERV_LISTEN_PORT}"
+	setup_firewall add "$UNM_SERV_LISTEN_PORT"
 
 	__info_msg "正在配置自动更新。。。"
 	local TEMP_CRONTAB_FILE="$(mktemp)"
-	crontab -l > "${TEMP_CRONTAB_FILE}"
-	echo -e "0 3 * * * { git -C \"${UNM_SERV_BIN_DIR}\" pull; systemctl restart "${UNM_SERV_SERVICE##*/}"; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
-	crontab "${TEMP_CRONTAB_FILE}"
-	rm -f "${TEMP_CRONTAB_FILE}"
+	crontab -l > "$TEMP_CRONTAB_FILE"
+	echo -e "0 3 * * * { git -C \"${UNM_SERV_BIN_DIR}\" pull; systemctl restart "${UNM_SERV_SERVICE##*/}"; } > \"/dev/null\" 2>&1" >> "$TEMP_CRONTAB_FILE"
+	crontab "$TEMP_CRONTAB_FILE"
+	rm -f "$TEMP_CRONTAB_FILE"
 
 	__info_msg "正在配置 systemd 服务。。。"
-	cat <<-EOF > "${UNM_SERV_SERVICE}"
+	cat <<-EOF > "$UNM_SERV_SERVICE"
 		[Unit]
 		Description=UnblockNeteaseMusic Server (Node.js version)
 		After=network-online.target
@@ -281,10 +279,10 @@ function install_unm_server() {
 		LimitNOFILE=1048576
 		NoNewPrivileges=true
 
-		EnvironmentFile=${UNM_SERV_ENV}
+		EnvironmentFile=$UNM_SERV_ENV
 
-		WorkingDirectory=${UNM_SERV_BIN_DIR}
-		ExecStart=/usr/bin/env node "${UNM_SERV_BIN_DIR}/app.js" -a 0.0.0.0 -p \$PORTS \$SOURCES \$ENDPOINT \$HOST \$PROXY \$STRICT
+		WorkingDirectory=$UNM_SERV_BIN_DIR
+		ExecStart=/usr/bin/env node "$UNM_SERV_BIN_DIR/app.js" -a 0.0.0.0 -p \$PORTS \$SOURCES \$ENDPOINT \$HOST \$PROXY \$STRICT
 		Restart=always
 
 		[Install]
@@ -292,15 +290,15 @@ function install_unm_server() {
 	EOF
 	systemctl enable "${UNM_SERV_SERVICE##*/}"
 
-	touch "${UNM_SERV_BIN_DIR}/.install-done"
+	touch "$UNM_SERV_BIN_DIR/.install-done"
 	
 	start_stop_unm_server
 
 	__info_msg "正在保存本脚本到 ${UNM_SERV_BIN}。。。"
-	if curl -fsSL "${UNM_SERV_SCRIPT_URL}" -o "${UNM_SERV_BIN}"; then
-		chmod 0755 "${UNM_SERV_BIN}"
+	if curl -fsSL "$UNM_SERV_SCRIPT_URL" -o "$UNM_SERV_BIN"; then
+		chmod 0755 "$UNM_SERV_BIN"
 	else
-		rm -f "${UNM_SERV_BIN}"
+		rm -f "$UNM_SERV_BIN"
 		__error_msg "保存脚本失败。"
 	fi
 
@@ -308,16 +306,13 @@ function install_unm_server() {
 	local UNM_SERV_IP="$(curl -fsL "https://myip.ipip.net/s" || curl -fsL "https://ipinfo.io/ip" || echo "127.0.0.1")"
 	local UNM_SERV_ADDR="${GREEN_BACK}${UNM_SERV_IP}:${UNM_SERV_LISTEN_PORT}${DEFAULT_COLOR}"
 	local UNM_SERV_PAC="${GREEN_BACK}http://${UNM_SERV_IP}:${UNM_SERV_LISTEN_PORT%:*}/proxy.pac${DEFAULT_COLOR}"
-	__info_msg "UnblockNeteaseMusic 服务端监听地址：${UNM_SERV_ADDR}"
-	__info_msg "UnblockNeteaseMusic 服务端自动代理文件地址：${UNM_SERV_PAC}"
+	__info_msg "UnblockNeteaseMusic 服务端监听地址：$UNM_SERV_ADDR"
+	__info_msg "UnblockNeteaseMusic 服务端自动代理文件地址：$UNM_SERV_PAC"
 	__info_msg "您可以输入 unm-server 以重新调起本脚本。"
 }
 
 function remove_unm_server(){
-	[ ! -d "${UNM_SERV_BIN_DIR}" ] && {
-		__error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"
-		exit 1
-	}
+	[ -d "${UNM_SERV_BIN_DIR}" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	local COMFIRM_REMOVE
 	__warning_msg "您即将移除 UnblockNeteaseMusic 服务端。"
@@ -339,16 +334,16 @@ function remove_unm_server(){
 
 			__info_msg "正在移除自动更新。。。"
 			local TEMP_CRONTAB_FILE="$(mktemp)"
-			crontab -l > "${TEMP_CRONTAB_FILE}"
-			sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "${TEMP_CRONTAB_FILE}"
-			crontab "${TEMP_CRONTAB_FILE}"
-			rm -f "${TEMP_CRONTAB_FILE}"
+			crontab -l > "$TEMP_CRONTAB_FILE"
+			sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "$TEMP_CRONTAB_FILE"
+			crontab "$TEMP_CRONTAB_FILE"
+			rm -f "$TEMP_CRONTAB_FILE"
 
 			local COMFIRM_REMOVE_CONFFILES
 			__warning_msg "是否保留 UnblockNeteaseMusic 服务端配置文件？"
 			read -rep "请确认 [Y/n]：" COMFIRM_REMOVE_CONFFILES
-			case "${COMFIRM_REMOVE_CONFFILES}" in
-				[nN][oO]|[nN]) __info_msg "正在移除配置文件。。。"; rm -rf "${UNM_SERV_CONF_DIR}" ;;
+			case "$COMFIRM_REMOVE_CONFFILES" in
+				[nN][oO]|[nN]) __info_msg "正在移除配置文件。。。"; rm -rf "$UNM_SERV_CONF_DIR" ;;
 				*) __info_msg "配置文件已保留。"
 				esac
 
@@ -362,7 +357,7 @@ function remove_unm_server(){
 }
 
 function start_stop_unm_server(){
-	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+	[ -f "$UNM_SERV_BIN_DIR/.install-done" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	if systemctl is-active "${UNM_SERV_SERVICE##*/}" > "/dev/null"; then
 		__info_msg "正在停止 UnblockNeteaseMusic 服务端。。。"
@@ -388,7 +383,7 @@ function start_stop_unm_server(){
 }
 
 function restart_unm_server() {
-	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+	[ -f "$UNM_SERV_BIN_DIR/.install-done" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	__info_msg "正在重启 UnblockNeteaseMusic 服务端。。。"
 	systemctl restart "${UNM_SERV_SERVICE##*/}"
@@ -402,8 +397,8 @@ function restart_unm_server() {
 }
 
 function tweak_unm_server() {
-	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
-	[ ! -f "${UNM_SERV_ENV}" ] && { __error_msg "UnblockNeteaseMusic 服务端配置文件已丢失，请重新安装。"; exit 1; }
+	[ -f "$UNM_SERV_BIN_DIR/.install-done" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+	[ -f "$UNM_SERV_ENV" ] || { __error_msg "UnblockNeteaseMusic 服务端配置文件已丢失，请重新安装。"; exit 1; }
 
 	source "${UNM_SERV_ENV}"
 
@@ -420,24 +415,31 @@ function tweak_unm_server() {
 	6. 更改音源强制替换触发条件
 
 	7. 启用/禁用严格模式
-	8. 启用/禁用无损音质获取
-	9. 启用/禁用本地黑胶伪装
-	10. 启用/禁用缓存
+	8. 启用/禁用缓存
 
-	11. 设定 Joox Cookie
-	12. 设定 Migu Cookie
-	13. 设定 QQ Cookie
-	14. 设定 Youtube API Key
-	15. 设定自定义证书文件
+	9. 启用/禁用无损音质获取
+	10. 启用/禁用最高音质选取
+	11. 启用/禁用顺序查询
+	12. 启用/禁用附加专辑名查询
+
+	13. 启用/禁用本地黑胶伪装
+	14. 启用/禁用去广告功能（仅部分生效）
+	15. 启用/禁用客户端更新检测
+
+	16. 设定 Joox Cookie
+	17. 设定 Migu Cookie
+	18. 设定 QQ Cookie
+	19. 设定 Youtube API Key
+	20. 设定自定义证书文件
 
 	Enter. 退出设定
 ----------------------------------------------"
 	local DO_ACTION
 	read -rep "Action [0-15]: " DO_ACTION
-	case "${DO_ACTION}" in
+	case "$DO_ACTION" in
 	"0")
 		local UNM_SERV_AUTO_UPDATE UNM_SERV_AUTO_UPDATE_TIP
-		if crontab -l | grep -q "${UNM_SERV_BIN_DIR}"; then
+		if crontab -l | grep -q "$UNM_SERV_BIN_DIR"; then
 			UNM_SERV_AUTO_UPDATE_TIP="禁用"
 		else
 			UNM_SERV_AUTO_UPDATE_TIP="启用"
@@ -447,8 +449,8 @@ function tweak_unm_server() {
 		case "${UNM_SERV_AUTO_UPDATE}" in
 		[yY][eE][sS]|[yY])
 			local TEMP_CRONTAB_FILE="$(mktemp)"
-			crontab -l > "${TEMP_CRONTAB_FILE}"
-			if [ "${UNM_SERV_AUTO_UPDATE_TIP}" == "禁用" ]; then
+			crontab -l > "$TEMP_CRONTAB_FILE"
+			if [ "$UNM_SERV_AUTO_UPDATE_TIP" == "禁用" ]; then
 				sed -i "/${UNM_SERV_BIN_DIR//\//\\/}/d" "${TEMP_CRONTAB_FILE}"
 			else
 				echo -e "0 3 * * * { git -C \"${UNM_SERV_BIN_DIR}\" pull; systemctl restart "${UNM_SERV_SERVICE##*/}"; } > \"/dev/null\" 2>&1" >> "${TEMP_CRONTAB_FILE}"
@@ -465,14 +467,14 @@ function tweak_unm_server() {
 	"1")
 		local UNM_SERV_LISTEN_PORT
 		read -rep "请输入监听端口（默认：${PORTS}）：" UNM_SERV_LISTEN_PORT
-		if [ -z "${UNM_SERV_LISTEN_PORT}" ]; then
+		if [ -z "$UNM_SERV_LISTEN_PORT" ]; then
 			__info_msg "端口未改变。"
 		else
-			sed -i "/PORTS=/d" "${UNM_SERV_ENV}"
-			echo -e "PORTS=${UNM_SERV_LISTEN_PORT}" >> "${UNM_SERV_ENV}"
+			sed -i "/PORTS=/d" "$UNM_SERV_ENV"
+			echo -e "PORTS=$UNM_SERV_LISTEN_PORT" >> "$UNM_SERV_ENV"
 			__info_msg "正在设定防火墙。。。"
-			setup_firewall remove "${PORTS}"
-			setup_firewall add "${UNM_SERV_LISTEN_PORT}"
+			setup_firewall remove "$PORTS"
+			setup_firewall add "$UNM_SERV_LISTEN_PORT"
 			__success_msg "端口已更改为 ${UNM_SERV_LISTEN_PORT}。"
 		fi
 		;;
@@ -482,30 +484,51 @@ function tweak_unm_server() {
 	"5") tweak_unm_server_arg "请输入 HTTP(S) 代理服务器地址（默认：${PROXY#-u *}）" "代理服务器地址" "PROXY" "-u " ;;
 	"6") tweak_unm_server_arg "请输入允许的最低源音质（默认：${MIN_BR}）：" "允许的最低源音质" "MIN_BR" ;;
 	"7") tweak_unm_server_bool "STRICT" "严格模式" "-s" ;;
-	"8") tweak_unm_server_bool "ENABLE_FLAC" "无损音质获取" ;;
-	"9") tweak_unm_server_bool "ENABLE_LOCAL_VIP" "本地黑胶伪装" ;;
-	"10") tweak_unm_server_bool "NO_CACHE" "【不使用缓存】" ;;
-	"11") tweak_unm_server_arg "请输入 Joox Cookie（默认：${JOOX_COOKIE}）：" "Joox Cookie" "JOOX_COOKIE" ;;
-	"12") tweak_unm_server_arg "请输入 Migu Cookie（默认：${MIGU_COOKIE}）：" "Migu Cookie" "MIGU_COOKIE" ;;
-	"13") tweak_unm_server_arg "请输入 QQ Cookie（默认：${QQ_COOKIE}）：" "QQ Cookie" "QQ_COOKIE" ;;
-	"14") tweak_unm_server_arg "请输入 Youtube API Key（默认：${YOUTUBE_KEY}）：" "Youtube API Key" "YOUTUBE_KEY" ;;
-	"15")
+	"8") tweak_unm_server_bool "NO_CACHE" "【不使用缓存】" ;;
+	"9") tweak_unm_server_bool "ENABLE_FLAC" "无损音质获取" ;;
+	"10") tweak_unm_server_bool "SELECT_MAX_BR" "最高音质选取" ;;
+	"11") tweak_unm_server_bool "FOLLOW_SOURCE_ORDER" "顺序查询" ;;
+	"12") tweak_unm_server_bool "SEARCH_ALBUM" "附加专辑名查询" ;;
+	"13")
+		local UNM_SERV_READ_VAL UNM_SERV_ENABLE_LOCAL_VIP
+		read -rep "是否启用本地黑胶伪装 [cvip/svip/no]：" UNM_SERV_READ_VAL
+		case "$UNM_SERV_READ_VAL" in
+		[cC][vV][iI][pP]) UNM_SERV_ENABLE_LOCAL_VIP="cvip" ;;
+		[sS][vV][iI][pP]) UNM_SERV_ENABLE_LOCAL_VIP="svip" ;;
+		[nN][oO]|[nN]) UNM_SERV_ENABLE_LOCAL_VIP="false" ;;
+		*) __info_msg "本地黑胶伪装设置未改变。" ;;
+		esac
+
+		[ -z "$UNM_SERV_ENABLE_LOCAL_VIP" ] || {
+			sed -i "/ENABLE_LOCAL_VIP=/d" "$UNM_SERV_ENV"
+			echo -e "ENABLE_LOCAL_VIP=\"$UNM_SERV_ENABLE_LOCAL_VIP\"" >> "$UNM_SERV_ENV"
+			restart_unm_server
+			__info_msg "已更新本地黑胶伪装设置。"
+		}
+		;;
+	"14") tweak_unm_server_bool "BLOCK_ADS" "去广告功能（仅部分生效）" ;;
+	"15") tweak_unm_server_bool "DISABLE_UPGRADE_CHECK" "客户端更新检测" ;;
+	"16") tweak_unm_server_arg "请输入 Joox Cookie（默认：${JOOX_COOKIE}）：" "Joox Cookie" "JOOX_COOKIE" ;;
+	"17") tweak_unm_server_arg "请输入 Migu Cookie（默认：${MIGU_COOKIE}）：" "Migu Cookie" "MIGU_COOKIE" ;;
+	"18") tweak_unm_server_arg "请输入 QQ Cookie（默认：${QQ_COOKIE}）：" "QQ Cookie" "QQ_COOKIE" ;;
+	"19") tweak_unm_server_arg "请输入 Youtube API Key（默认：${YOUTUBE_KEY}）：" "Youtube API Key" "YOUTUBE_KEY" ;;
+	"20")
 		__info_msg "请将您的证书文件上传至 \"${UNM_SERV_CONF_DIR}\"。"
 		local UNM_SERV_CUSTOM_CERT UNM_SERV_CUSTOM_CERT_KEY
 		read -rep "请输入证书文件名（默认：${SIGN_CERT##*/}）：" UNM_SERV_CUSTOM_CERT
 		read -rep "请输入密钥文件名（默认：${SIGN_KEY##*/}）：" UNM_SERV_CUSTOM_CERT_KEY
-		if [ "${UNM_SERV_CUSTOM_CERT}" == "-" ] || [ "${UNM_SERV_CUSTOM_CERT_KEY}" == "-" ]; then
-			sed -i "/SIGN_CERT=/d" "${UNM_SERV_READ_ARG}"
-			sed -i "/SIGN_KEY=/d" "${UNM_SERV_READ_ARG}"
+		if [ "$UNM_SERV_CUSTOM_CERT" == "-" ] || [ "$UNM_SERV_CUSTOM_CERT_KEY" == "-" ]; then
+			sed -i "/SIGN_CERT=/d" "$UNM_SERV_READ_ARG"
+			sed -i "/SIGN_KEY=/d" "$UNM_SERV_READ_ARG"
 			restart_unm_server
 			__success_msg "自定义证书文件设定已清空。"
-		elif [ ! -e "${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT:-dummy.impossible.crt}" ] || [ ! -e "${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT_KEY:-dummy.impossible.key}" ]; then
+		elif [ ! -e "$UNM_SERV_CONF_DIR/${UNM_SERV_CUSTOM_CERT:-dummy.impossible.crt}" ] || [ ! -e "$UNM_SERV_CONF_DIR/${UNM_SERV_CUSTOM_CERT_KEY:-dummy.impossible.key}" ]; then
 			__warning_msg "证书文件不存在或未输入。"
 		else
-			sed -i "/SIGN_CERT=/d" "${UNM_SERV_READ_ARG}"
-			sed -i "/SIGN_KEY=/d" "${UNM_SERV_READ_ARG}"
-			echo -e "SIGN_CERT=\"${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT}\"" >> "${UNM_SERV_ENV}"
-			echo -e "SIGN_KEY=\"${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT_KEY}\"" >> "${UNM_SERV_ENV}"
+			sed -i "/SIGN_CERT=/d" "$UNM_SERV_READ_ARG"
+			sed -i "/SIGN_KEY=/d" "$UNM_SERV_READ_ARG"
+			echo -e "SIGN_CERT=\"${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT}\"" >> "$UNM_SERV_ENV"
+			echo -e "SIGN_KEY=\"${UNM_SERV_CONF_DIR}/${UNM_SERV_CUSTOM_CERT_KEY}\"" >> "$UNM_SERV_ENV"
 			restart_unm_server
 			__success_msg "自定义证书文件已指定。"
 		fi
@@ -526,16 +549,16 @@ function tweak_unm_server() {
 function tweak_unm_server_arg(){
 	local UNM_SERV_READ_ARG
 	read -rep "$1" UNM_SERV_READ_ARG
-	if [ -z "${UNM_SERV_READ_ARG}" ]; then
+	if [ -z "$UNM_SERV_READ_ARG" ]; then
 		__info_msg "$2 未改变。"
 		return 2
-	elif [ "${UNM_SERV_READ_ARG}" == "-" ]; then
-		sed -i "/$3=/d" "${UNM_SERV_ENV}"
+	elif [ "$UNM_SERV_READ_ARG" == "-" ]; then
+		sed -i "/$3=/d" "$UNM_SERV_ENV"
 		restart_unm_server
 		__success_msg "$2 已清空。"
 	else
-		sed -i "/$3=/d" "${UNM_SERV_ENV}"
-		echo -e "$3=\"$4${UNM_SERV_READ_ARG}\"" >> "${UNM_SERV_ENV}"
+		sed -i "/$3=/d" "$UNM_SERV_ENV"
+		echo -e "$3=\"$4${UNM_SERV_READ_ARG}\"" >> "$UNM_SERV_ENV"
 		restart_unm_server
 		__success_msg "$2 已更改为 ${UNM_SERV_READ_ARG}。"
 	fi
@@ -552,8 +575,8 @@ function tweak_unm_server_bool(){
 	read -rep "是否${UNM_SERV_BOOL_TIP}$2 [y/N]：" UNM_SERV_READ_BOOL
 	case "${UNM_SERV_READ_BOOL}" in
 	[yY][eE][sS]|[yY])
-		sed -i "/$1=/d" "${UNM_SERV_ENV}"
-		[ -n "${UNM_SERV_BOOL_MODIFY}" ] && echo -e "$1=\"${3:-true}\"" >> "${UNM_SERV_ENV}"
+		sed -i "/$1=/d" "$UNM_SERV_ENV"
+		[ -n "$UNM_SERV_BOOL_MODIFY" ] && echo -e "$1=\"${3:-true}\"" >> "$UNM_SERV_ENV"
 		restart_unm_server
 		__info_msg "$2已${UNM_SERV_BOOL_TIP}。"
 		;;
@@ -565,21 +588,21 @@ function tweak_unm_server_bool(){
 }
 
 function update_unm_server() {
-	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+	[ -f "$UNM_SERV_BIN_DIR/.install-done" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	__info_msg "正在更新 UnblockNeteaseMusic 服务端管理脚本。。。"
 	local UNM_SERV_BIN_TEMP="$(mktemp)"
-	if curl -fsSL "${UNM_SERV_SCRIPT_URL}" -o "${UNM_SERV_BIN_TEMP}"; then
-		mv -f "${UNM_SERV_BIN_TEMP}" "${UNM_SERV_BIN}"
-		chmod 0755 "${UNM_SERV_BIN}"
+	if curl -fsSL "$UNM_SERV_SCRIPT_URL" -o "$UNM_SERV_BIN_TEMP"; then
+		mv -f "$UNM_SERV_BIN_TEMP" "$UNM_SERV_BIN"
+		chmod 0755 "$UNM_SERV_BIN"
 		__success_msg "UnblockNeteaseMusic 服务端管理脚本更新成功。"
 	else
-		rm -f "${UNM_SERV_BIN_TEMP}"
+		rm -f "$UNM_SERV_BIN_TEMP"
 		__error_msg "UnblockNeteaseMusic 服务端管理脚本更新失败。"
 	fi
 
 	__info_msg "正在更新 UnblockNeteaseMusic 服务端。。。"
-	pushd "${UNM_SERV_BIN_DIR}"
+	pushd "$UNM_SERV_BIN_DIR"
 	if git pull; then
 		__success_msg "Pull 最新 commits 成功。"
 		restart_unm_server
@@ -593,20 +616,24 @@ function setup_firewall() {
 	local PORT_HTTP="${2%:*}"
 	local PORT_HTTPS="${2#:*}"
 	if [ "${SYSTEM_OS}" == "RHEL" ]; then
-		firewall-cmd --permanent --zone=public --$1-port="${PORT_HTTP}/tcp"
-		[ "${PORT_HTTPS}" != "${PORT_HTTP}" ] && firewall-cmd --permanent --zone=public --$1-port="${PORT_HTTPS}/tcp"
-		firewall-cmd --reload
+		[ -z "$(command -v firewall-cmd)" ] || {
+			firewall-cmd --permanent --zone=public --$1-port="$PORT_HTTP/tcp"
+			[ "$PORT_HTTPS" != "$PORT_HTTP" ] && firewall-cmd --permanent --zone=public --$1-port="$PORT_HTTPS/tcp"
+			firewall-cmd --reload
+		}
 	elif [ "${SYSTEM_OS}" == "DEBIAN" ]; then
-		local UFW_ARG
-		[ "$1" == "remove" ] && UFW_ARG="delete"
-		ufw $UFW_ARG allow "${PORT_HTTP}/tcp"
-		[ "${PORT_HTTPS}" != "${PORT_HTTP}" ] && ufw $UFW_ARG allow "${PORT_HTTPS}/tcp"
-		ufw reload
+		[ -z "$(command -v ufw)" ] || {
+			local UFW_ARG
+			[ "$1" == "remove" ] && UFW_ARG="delete"
+			ufw $UFW_ARG allow "$PORT_HTTP/tcp"
+			[ "$PORT_HTTPS" != "$PORT_HTTP" ] && ufw $UFW_ARG allow "$PORT_HTTPS/tcp"
+			ufw reload
+		}
 	fi
 }
 
 function print_unm_log(){
-	[ ! -f "${UNM_SERV_BIN_DIR}/.install-done" ] && { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
+	[ -f "$UNM_SERV_BIN_DIR/.install-done" ] || { __error_msg "您目前尚未安装 UnblockNeteaseMusic 服务端。"; exit 1; }
 
 	if systemctl is-active "${UNM_SERV_SERVICE##*/}" > "/dev/null"; then
 		journalctl -e -u "${UNM_SERV_SERVICE##*/}"
