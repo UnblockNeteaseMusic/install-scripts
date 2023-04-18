@@ -223,7 +223,7 @@ function install_unm_server() {
 
 		local UNM_SERV_SELECT_MAX_BR
 		if [ "$UNM_SERV_ENABLE_FLAC" == "true" ]; then
-			read -rep "启用音源音质选取可选择所有音源中的最高码率替换音频，但会降低响应速度。\x0a是否启用音源音质选取 [y/N]：" UNM_SERV_SELECT_MAX_BR
+			read -rep $"启用音源音质选取可选择所有音源中的最高码率替换音频，但会降低响应速度。\x0a是否启用音源音质选取 [y/N]：" UNM_SERV_SELECT_MAX_BR
 			case "$UNM_SERV_SELECT_MAX_BR" in
 				[yY][eE][sS]|[yY]) UNM_SERV_SELECT_MAX_BR="true" ;;
 				*) UNM_SERV_SELECT_MAX_BR="" ;;
@@ -460,7 +460,6 @@ function tweak_unm_server() {
 			;;
 		*)
 			__info_msg "自动更新未改变。"
-			return 2
 			;;
 		esac
 		;;
